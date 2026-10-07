@@ -1,0 +1,5 @@
+our ref,ticker,purchase_price,quantity,purchase_date
+IBKR,AAPL,$180.00,50,2024-06-10
+IBKR,NVDA,$120.00,20,2024-08-01
+TRADING,LLOY.L,£0.70,1000,2024-05-15
+TRADING,SGLN.L,6049.38p,6,2024-09-02

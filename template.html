@@ -1,0 +1,1390 @@
+<title>Holdings Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  /* ---------------------------------------------------------------- tokens */
+  :root {
+    --ground: #eceff2;
+    --surface: #ffffff;
+    --surface-2: #f4f6f8;
+    --surface-3: #eaeef1;
+    --ink: #12171b;
+    --muted: #5d6871;
+    --faint: #8996a1;
+    --rule: #d5dbe0;
+    --rule-soft: #e6eaee;
+    --accent: #16456b;
+    --accent-soft: #e3ecf4;
+    --gain: #0b6f52;
+    --gain-soft: #e0f0e9;
+    --loss: #ab3529;
+    --loss-soft: #f8e5e2;
+    --flag: #8a6210;
+    --flag-soft: #f6edda;
+    --overlay: rgba(18, 23, 27, .38);
+    --shadow: 0 1px 2px rgba(18, 23, 27, .06), 0 8px 24px -16px rgba(18, 23, 27, .28);
+    --shadow-drawer: -24px 0 60px -30px rgba(18, 23, 27, .5);
+    --pin-shadow: 6px 0 8px -8px rgba(18, 23, 27, .45);
+
+    --display: "Archivo", "Segoe UI", system-ui, sans-serif;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0c1014;
+      --surface: #141a20;
+      --surface-2: #1a222a;
+      --surface-3: #212b34;
+      --ink: #e7ecf0;
+      --muted: #96a3ad;
+      --faint: #6f7c87;
+      --rule: #2a343d;
+      --rule-soft: #212a32;
+      --accent: #7cbae5;
+      --accent-soft: #172a39;
+      --gain: #40c79a;
+      --gain-soft: #103129;
+      --loss: #f2735f;
+      --loss-soft: #3b1e1b;
+      --flag: #d8a944;
+      --flag-soft: #2f2712;
+      --overlay: rgba(0, 0, 0, .6);
+      --shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 10px 30px -18px rgba(0, 0, 0, .85);
+      --shadow-drawer: -24px 0 60px -30px rgba(0, 0, 0, .9);
+      --pin-shadow: 6px 0 10px -8px rgba(0, 0, 0, .8);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0c1014;
+    --surface: #141a20;
+    --surface-2: #1a222a;
+    --surface-3: #212b34;
+    --ink: #e7ecf0;
+    --muted: #96a3ad;
+    --faint: #6f7c87;
+    --rule: #2a343d;
+    --rule-soft: #212a32;
+    --accent: #7cbae5;
+    --accent-soft: #172a39;
+    --gain: #40c79a;
+    --gain-soft: #103129;
+    --loss: #f2735f;
+    --loss-soft: #3b1e1b;
+    --flag: #d8a944;
+    --flag-soft: #2f2712;
+    --overlay: rgba(0, 0, 0, .6);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 10px 30px -18px rgba(0, 0, 0, .85);
+    --shadow-drawer: -24px 0 60px -30px rgba(0, 0, 0, .9);
+    --pin-shadow: 6px 0 10px -8px rgba(0, 0, 0, .8);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scrollbar-color: var(--rule) var(--ground); scrollbar-width: thin; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--display);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track { background: var(--surface-2); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--rule);
+    border: 3px solid var(--surface-2);
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+  ::-webkit-scrollbar-corner { background: var(--surface-2); }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .wrap {
+    max-width: 1560px;
+    height: 100vh;
+    margin: 0 auto;
+    padding: 11px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* -------------------------------------------------------------- masthead */
+  /* One row: wordmark, what this is, theme, snapshot, refresh. Nothing here
+     earns vertical space that the table could use for another holding. */
+  .masthead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+
+  .wordmark {
+    font: 700 13px/1.2 var(--display);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font: 500 10px/1.2 var(--mono);
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stamp {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .stamp b { color: var(--ink); font-weight: 600; }
+  .stamp #stamp-meta[hidden] { display: none; }
+  .stamp #stamp-meta { color: var(--accent); white-space: nowrap; }
+
+  .stamp-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: var(--surface);
+    white-space: nowrap;
+  }
+
+  .stamp-line::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+  }
+
+  #refresh-now {
+    padding: 2px 8px;
+    font: 500 9px/1.3 var(--mono);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  #refresh-now:hover:not(:disabled) { color: var(--ground); background: var(--accent); }
+  #refresh-now:disabled { cursor: progress; opacity: .65; }
+  #refresh-now[hidden] { display: none; }
+
+  .stamp-line.is-error::before { background: var(--loss); }
+
+  /* theme switch ---------------------------------------------------------- */
+  .theme {
+    display: inline-flex;
+    padding: 2px;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: var(--surface);
+  }
+
+  .theme button {
+    font: 500 9px/1 var(--mono);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background .14s, color .14s;
+  }
+
+  .theme button:hover { color: var(--ink); }
+
+  .theme button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--ground);
+  }
+
+  /* ---------------------------------------------------------------- totals */
+  /* The headline figure stays large; the supporting numbers sit on one line
+     underneath it rather than in a four-column block of their own. */
+  .totals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 8px;
+  }
+
+  .money-card {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 7px 13px 8px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+  }
+
+  .money-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--accent);
+  }
+
+  .money-card.is-up::before { background: var(--gain); }
+  .money-card.is-down::before { background: var(--loss); }
+
+  .money-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  .money-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+  }
+
+  .money-value {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+
+  .money-delta {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .money-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 15px;
+    margin: 0;
+    padding-top: 3px;
+  }
+
+  .money-grid div {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+
+  .money-grid dt, .stat-label {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--faint);
+    white-space: nowrap;
+  }
+
+  .money-grid dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --------------------------------------------------------------- toolbar */
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .search {
+    flex: 0 1 300px;
+    min-width: 160px;
+    margin-left: auto;
+    padding: 6px 11px;
+    font: 400 13px/1.3 var(--mono);
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+  }
+
+  .search::placeholder { color: var(--faint); }
+
+  .chip {
+    font: 500 10.5px/1 var(--mono);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    padding: 6px 11px;
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background .14s, color .14s, border-color .14s;
+  }
+
+  .chip-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    padding-left: 9px;
+    margin-left: 2px;
+    border-left: 1px solid var(--rule);
+  }
+
+  .chip.is-ref[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--ground);
+  }
+
+  .chip:hover { border-color: var(--accent); color: var(--ink); }
+
+  .chip[aria-pressed="true"] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--ground);
+  }
+
+  /* ----------------------------------------------------------------- table */
+  /* The wrapper owns both scroll axes. Because it scrolls vertically, the
+     sticky header actually sticks; because it scrolls horizontally, the pinned
+     ticker column stays put. A sticky header inside an overflow-x-only box
+     never sticks at all. */
+  .ledger-shell {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    box-shadow: var(--shadow);
+    overflow: auto;
+    overscroll-behavior: contain;
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    padding: 10px 9px;
+    font: 500 9.5px/1.25 var(--mono);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: right;
+    white-space: normal;
+    max-width: 74px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--rule);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  thead th.left { text-align: left; }
+  thead th.pin, thead th.ref-col { max-width: none; white-space: nowrap; }
+  thead th:not([data-sort]) { cursor: default; }
+  thead th[data-sort]:hover { color: var(--ink); }
+  .arrow { display: inline-block; width: 9px; font-size: 8px; opacity: .6; }
+
+  /* pinned first column */
+  thead th.pin { z-index: 4; }
+
+  .pin {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface);
+  }
+
+  thead .pin { background: var(--surface-2); }
+
+  .is-pinned .pin::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: -8px;
+    bottom: -1px;
+    width: 8px;
+    pointer-events: none;
+    box-shadow: var(--pin-shadow);
+  }
+
+  tbody td {
+    padding: 5px 9px;
+    text-align: right;
+    white-space: nowrap;
+    font: 400 12.5px/1.5 var(--mono);
+    border-bottom: 1px solid var(--rule-soft);
+    background: var(--surface);
+  }
+
+  tbody td.left { text-align: left; }
+
+  tr.row { cursor: pointer; }
+  tr.row:hover td { background: var(--surface-2); }
+  tr.row.active td { background: var(--accent-soft); }
+
+  /* No position here: the .pin rule makes this cell sticky, and a `relative`
+     declared later would outrank it and unpin the column. Sticky is already a
+     positioned ancestor, so the ::before stripe anchors correctly. */
+  .ref-col {
+    width: 1%;
+    padding-right: 6px;
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 500;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  thead th.ref-col { text-align: left; }
+
+  td.ticker {
+    padding-left: 18px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  td.ticker::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 3px;
+    bottom: 3px;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: var(--faint);
+  }
+
+  tr.up td.ticker::before { background: var(--gain); }
+  tr.down td.ticker::before { background: var(--loss); }
+
+  .stack { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+  .stack.left { align-items: flex-start; }
+
+  .company {
+    display: inline-block;
+    max-width: 118px;
+    margin-left: 7px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: baseline;
+    font: 400 11.5px/1.3 var(--display);
+    color: var(--muted);
+  }
+
+  .est {
+    margin-left: 1px;
+    color: var(--flag);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: help;
+  }
+
+  .sub-line {
+    font: 400 10px/1.3 var(--mono);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 3px 7px;
+    font: 500 9.5px/1.3 var(--mono);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid transparent;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .tag.flag { color: var(--flag); background: var(--flag-soft); }
+  .tag.plain { color: var(--muted); background: transparent; border-color: var(--rule); }
+
+  .up-txt { color: var(--gain); }
+  .down-txt { color: var(--loss); }
+
+  .pl-cash { font-weight: 600; }
+
+  .pct-pill {
+    display: inline-block;
+    min-width: 70px;
+    padding: 1px 8px;
+    font-weight: 600;
+    font-size: 12px;
+    text-align: center;
+    background: var(--surface-3);
+    border-radius: 3px;
+  }
+
+  tr.up .pct-pill { color: var(--gain); background: var(--gain-soft); }
+  tr.down .pct-pill { color: var(--loss); background: var(--loss-soft); }
+
+  .spark { display: block; }
+
+  .caret { color: var(--faint); font-size: 15px; }
+  tr.row:hover .caret, tr.row.active .caret { color: var(--ink); }
+
+  .empty {
+    padding: 46px 24px;
+    text-align: center;
+    font: 400 15px/1.5 var(--serif);
+    color: var(--muted);
+  }
+
+  /* ---------------------------------------------------------------- drawer */
+  /* The research detail lives outside the table. Expanding it inside a row
+     fought the horizontal scroll and squashed the prose into one column. */
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: var(--overlay);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .22s ease, visibility .22s;
+  }
+
+  .scrim.open { opacity: 1; visibility: visible; }
+
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 50;
+    width: min(620px, 100vw);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border-left: 1px solid var(--rule);
+    box-shadow: var(--shadow-drawer);
+    transform: translateX(100%);
+    transition: transform .26s cubic-bezier(.32, .72, 0, 1);
+  }
+
+  .drawer.open { transform: none; }
+
+  .drawer-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface-2);
+  }
+
+  .drawer-title {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .drawer-title h2 {
+    margin: 0;
+    font: 700 25px/1.05 var(--display);
+    letter-spacing: -.02em;
+  }
+
+  .drawer-title p {
+    margin: 0;
+    font: 400 13.5px/1.4 var(--display);
+    color: var(--muted);
+  }
+
+  .drawer-figs {
+    display: flex;
+    gap: 18px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface-2);
+    flex-wrap: wrap;
+  }
+
+  .drawer-figs div { display: flex; flex-direction: column; gap: 2px; }
+
+  .drawer-figs b {
+    font: 600 17px/1.1 var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .close {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    font: 400 19px/1 var(--display);
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .close:hover { color: var(--ink); border-color: var(--accent); }
+
+  .drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 22px 24px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .panel { display: flex; flex-direction: column; gap: 10px; }
+
+  .panel h3 {
+    margin: 0;
+    padding-bottom: 7px;
+    font: 600 10.5px/1.2 var(--mono);
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .panel p, .panel li {
+    margin: 0;
+    font: 400 14.5px/1.62 var(--serif);
+    color: var(--ink);
+    max-width: 62ch;
+  }
+
+  .panel ul {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .panel li::marker { color: var(--faint); }
+
+  .sub {
+    margin: 4px 0 0;
+    font: 400 10px/1.3 var(--mono);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  .meta-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+  .kv {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+    gap: 13px 14px;
+  }
+
+  .kv div { display: flex; flex-direction: column; gap: 2px; }
+
+  .kv b {
+    font: 500 14px/1.2 var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .trend {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule-soft);
+    border-radius: 4px;
+  }
+
+  .trend svg { width: 100%; height: auto; }
+  .trend .sub { margin: 0; }
+
+  .range { display: flex; flex-direction: column; gap: 6px; }
+
+  .range-bar {
+    position: relative;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface-3);
+  }
+
+  .range-bar i {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: 12px;
+    background: var(--ink);
+    border-radius: 1px;
+  }
+
+  .range-ends {
+    display: flex;
+    justify-content: space-between;
+    font: 400 11px/1.2 var(--mono);
+    color: var(--muted);
+  }
+
+  .news-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px 0;
+    border-bottom: 1px dotted var(--rule);
+  }
+
+  .news-item:last-child { border-bottom: 0; }
+
+  .news-item a {
+    font: 600 14px/1.35 var(--display);
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .news-item a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .news-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    font: 400 10.5px/1.3 var(--mono);
+    color: var(--faint);
+  }
+
+  .news-why {
+    font: italic 400 13px/1.5 var(--serif);
+    color: var(--muted);
+  }
+
+  @media (max-height: 560px) {
+    .wrap { height: auto; min-height: 100vh; }
+    .ledger-shell { flex: none; max-height: 65vh; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  @media (max-width: 860px) {
+    .wrap { padding: 20px 12px 20px; gap: 15px; }
+    .masthead { align-items: flex-start; }
+    .stamp { align-items: flex-start; }
+    .money-grid { grid-template-columns: repeat(2, 1fr); }
+    .drawer { width: 100vw; }
+    .drawer-head, .drawer-figs, .drawer-body { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+<!--BODY-->
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand">
+      <span class="wordmark">Holdings Ledger</span>
+      <span class="eyebrow">US &amp; UK equities &middot; personal holdings</span>
+    </div>
+    <div class="stamp">
+      <span id="stamp-meta" hidden></span>
+      <div class="theme" role="group" aria-label="Colour theme">
+        <button type="button" data-theme-mode="system" aria-pressed="true">Auto</button>
+        <button type="button" data-theme-mode="light" aria-pressed="false">Light</button>
+        <button type="button" data-theme-mode="dark" aria-pressed="false">Dark</button>
+      </div>
+      <span class="stamp-line"><b id="stamp-time">&mdash;</b>
+        <button type="button" id="refresh-now" hidden>Refresh</button>
+      </span>
+    </div>
+  </header>
+
+  <section class="totals" id="totals"></section>
+
+  <div class="toolbar">
+    <button class="chip" data-filter="all" aria-pressed="true">All</button>
+    <button class="chip" data-filter="US" aria-pressed="false">US</button>
+    <button class="chip" data-filter="UK" aria-pressed="false">UK</button>
+    <button class="chip" data-filter="up" aria-pressed="false">In profit</button>
+    <button class="chip" data-filter="down" aria-pressed="false">At a loss</button>
+    <span class="chip-group" id="ref-chips"></span>
+    <input class="search" id="search" type="search" placeholder="Filter by ref, ticker, company or sector" aria-label="Filter holdings">
+  </div>
+
+  <div class="ledger-shell" id="shell">
+    <table>
+      <thead>
+        <tr>
+          <th class="ref-col" data-sort="ref">Our ref <span class="arrow"></span></th>
+          <th class="left pin" data-sort="ticker">Ticker <span class="arrow"></span></th>
+          <th data-sort="purchase_price">Purchase <span class="arrow"></span></th>
+          <th data-sort="quantity">No of shares <span class="arrow"></span></th>
+          <th data-sort="invested">Value <span class="arrow"></span></th>
+          <th data-sort="current_price">Current price <span class="arrow"></span></th>
+          <th data-sort="day_change_pct">24 hrs % <span class="arrow"></span></th>
+          <th data-sort="ret_1w">Weekly % <span class="arrow"></span></th>
+          <th data-sort="ret_1m">Monthly % <span class="arrow"></span></th>
+          <th data-sort="pl">Profit / loss <span class="arrow"></span></th>
+          <th data-sort="pl_pct">P/L % <span class="arrow"></span></th>
+          <th data-sort="earnings_next_days">Earnings date <span class="arrow"></span></th>
+          <th data-sort="news_count">Signals <span class="arrow"></span></th>
+          <th aria-label="Open detail"></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-name" hidden>
+  <div class="drawer-head">
+    <div class="drawer-title">
+      <h2 id="drawer-name">&mdash;</h2>
+      <p id="drawer-sub"></p>
+    </div>
+    <button class="close" id="drawer-close" type="button" aria-label="Close">&times;</button>
+  </div>
+  <div class="drawer-figs" id="drawer-figs"></div>
+  <div class="drawer-body" id="drawer-body"></div>
+</aside>
+
+<script>
+  const DATA = "__PORTFOLIO_DATA__";
+  const rowsEl = document.getElementById("rows");
+  const shellEl = document.getElementById("shell");
+  const drawerEl = document.getElementById("drawer");
+  const scrimEl = document.getElementById("scrim");
+  const state = { filter: "all", ref: "all", query: "", sort: "current_value",
+                  dir: -1, open: null };
+
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function money(sym, v, dp) {
+    if (v === null || v === undefined || Number.isNaN(v)) return "—";
+    const d = dp === undefined ? 2 : dp;
+    return sym + v.toLocaleString("en-GB", { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  const dp = (v) => (v !== null && v !== undefined && v < 5 ? 4 : 2);
+
+  function signed(sym, v) {
+    if (v === null || v === undefined) return "—";
+    return (v < 0 ? "−" : "+") + money(sym, Math.abs(v));
+  }
+
+  function pct(v, d) {
+    if (v === null || v === undefined) return "—";
+    return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(d === undefined ? 2 : d) + "%";
+  }
+
+  const tone = (v) => (v === null || v === undefined ? "" : v >= 0 ? "up-txt" : "down-txt");
+
+  function sparkline(series, gaining, width, height) {
+    if (!series || series.length < 4) return "";
+    const w = width || 82, h = height || 26, pad = 2;
+    const lo = Math.min.apply(null, series), hi = Math.max.apply(null, series);
+    const span = (hi - lo) || 1;
+    const step = (w - pad * 2) / (series.length - 1);
+    const pts = series.map((v, i) =>
+      (pad + i * step).toFixed(1) + "," + (h - pad - ((v - lo) / span) * (h - pad * 2)).toFixed(1));
+    const stroke = gaining ? "var(--gain)" : "var(--loss)";
+    const last = pts[pts.length - 1].split(",");
+    return '<svg class="spark" viewBox="0 0 ' + w + " " + h + '" width="' + w + '" height="' + h +
+      '" aria-hidden="true"><polyline fill="none" stroke="' + stroke +
+      '" stroke-width="' + (width ? 2 : 1.4) +
+      '" stroke-linejoin="round" stroke-linecap="round" points="' +
+      pts.join(" ") + '"></polyline><circle cx="' + last[0] + '" cy="' + last[1] +
+      '" r="' + (width ? 3.2 : 2.2) + '" fill="' + stroke + '"></circle></svg>';
+  }
+
+  /* --------------------------------------------------------------- theme */
+  const THEME_KEY = "holdings-ledger-theme";
+
+  function setTheme(mode) {
+    if (mode === "light" || mode === "dark") {
+      document.documentElement.setAttribute("data-theme", mode);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+      mode = "system";
+    }
+    try { localStorage.setItem(THEME_KEY, mode); } catch (e) { /* private mode */ }
+    document.querySelectorAll("[data-theme-mode]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.themeMode === mode));
+    });
+  }
+
+  document.querySelectorAll("[data-theme-mode]").forEach(function (btn) {
+    btn.addEventListener("click", function () { setTheme(btn.dataset.themeMode); });
+  });
+
+  /* -------------------------------------------------------------- totals */
+  function renderTotals() {
+    const names = { USD: "US holdings · US dollars", GBP: "UK holdings · pounds sterling" };
+    const host = document.getElementById("totals");
+    host.innerHTML = Object.keys(DATA.totals).map(function (ccy) {
+      const t = DATA.totals[ccy];
+      return '<article class="money-card ' + (t.pl >= 0 ? "is-up" : "is-down") + '">' +
+        '<div class="money-head"><span>' + esc(names[ccy] || ccy) + "</span><span>" +
+        t.count + (t.count === 1 ? " holding" : " holdings") + "</span></div>" +
+        '<div class="money-row"><span class="money-value">' + money(t.symbol, t.value) +
+        '</span><span class="money-delta ' + tone(t.pl) + '">' + signed(t.symbol, t.pl) +
+        " &middot; " + pct(t.pl_pct) + " on cost</span></div>" +
+        '<dl class="money-grid">' +
+        "<div><dt>Invested</dt><dd>" + money(t.symbol, t.invested) + "</dd></div>" +
+        '<div><dt>Today</dt><dd class="' + tone(t.day_change) + '">' +
+        signed(t.symbol, t.day_change) + "</dd></div>" +
+        "<div><dt>In profit</dt><dd>" + t.winners + "</dd></div>" +
+        "<div><dt>At a loss</dt><dd>" + t.losers + "</dd></div>" +
+        "</dl></article>";
+    }).join("");
+  }
+
+  /* -------------------------------------------------------------- drawer */
+  function bullets(list) {
+    if (!list || !list.length) return "";
+    return "<ul>" + list.map(function (b) { return "<li>" + esc(b) + "</li>"; }).join("") + "</ul>";
+  }
+
+  function drawerContent(h) {
+    const s = h.symbol;
+    const desc = h.description
+      ? esc(h.description.split(/(?<=\.)\s+/).slice(0, 3).join(" "))
+      : h.is_fund
+        ? "An exchange-traded product listed on " + esc(h.exchange || h.market) +
+          ", not an operating company. Its price follows the assets it holds rather than " +
+          "the trading results of a business, so there are no revenues, margins or " +
+          "earnings dates behind it."
+        : "No company description available from the data source.";
+
+    const chips = [];
+    if (h.sector) chips.push('<span class="tag plain">' + esc(h.sector) + "</span>");
+    if (h.industry) chips.push('<span class="tag plain">' + esc(h.industry) + "</span>");
+    if (h.market_cap_fmt) chips.push('<span class="tag plain">Mkt cap ' + esc(h.market_cap_fmt) + "</span>");
+    if (h.employees) chips.push('<span class="tag plain">' + h.employees.toLocaleString("en-GB") + " staff</span>");
+
+    const range = (h.w52_low != null && h.w52_high != null && h.w52_pos != null)
+      ? '<div class="range"><div class="range-bar"><i style="left:' +
+        Math.max(0, Math.min(100, h.w52_pos)).toFixed(1) + '%"></i></div>' +
+        '<div class="range-ends"><span>' + money(s, h.w52_low, dp(h.w52_low)) +
+        " low</span><span>" + money(s, h.w52_high, dp(h.w52_high)) + " high</span></div></div>"
+      : "";
+
+    const stats = [
+      ["1 month", pct(h.ret_1m, 1)], ["3 months", pct(h.ret_3m, 1)],
+      ["6 months", pct(h.ret_6m, 1)], ["12 months", pct(h.ret_1y, 1)],
+      ["50-day avg", money(s, h.ma50, dp(h.ma50))],
+      ["200-day avg", money(s, h.ma200, dp(h.ma200))],
+      ["Trailing P/E", h.pe_trailing ? h.pe_trailing.toFixed(1) : "—"],
+      ["Forward P/E", h.pe_forward ? h.pe_forward.toFixed(1) : "—"],
+      ["Dividend yield", h.div_yield ? h.div_yield.toFixed(2) + "%" : "None"],
+      ["Beta", h.beta ? h.beta.toFixed(2) : "—"],
+      ["Analyst target", money(s, h.target_mean, dp(h.target_mean))],
+      ["Consensus", h.recommendation ? esc(h.recommendation) : "—"]
+    ].map(function (kv) {
+      return '<div><span class="stat-label">' + kv[0] + "</span><b>" + kv[1] + "</b></div>";
+    }).join("");
+
+    const earn = [];
+    if (h.earnings_next) {
+      earn.push("<p><b>Next: " + esc(h.earnings_next) + "</b>" +
+        (h.earnings_next_days != null && h.earnings_next_days >= 0
+          ? " &middot; about " + h.earnings_next_days + " days away" : "") + " " +
+        (h.earnings_next_estimate
+          ? '<span class="tag flag">Estimated</span>' : '<span class="tag">Confirmed</span>') +
+        "</p>");
+    } else if (h.is_fund) {
+      earn.push("<p>Exchange-traded products do not report earnings. There is no results " +
+        "calendar to watch — the price tracks its underlying assets.</p>");
+    } else {
+      earn.push("<p>No upcoming earnings date published for this listing.</p>");
+    }
+    if (h.eps_estimate) {
+      earn.push("<p>Consensus expects earnings per share of about " + h.eps_estimate.toFixed(2) +
+        (h.revenue_estimate_fmt ? " on revenue of " + esc(h.revenue_estimate_fmt) : "") + ".</p>");
+    }
+    if (h.earnings_last) earn.push('<p class="sub">Last reported ' + esc(h.earnings_last) + "</p>");
+    if (h.last_quarter_end) earn.push('<p class="sub">Most recent quarter ended ' + esc(h.last_quarter_end) + "</p>");
+
+    const news = (h.news && h.news.length)
+      ? h.news.map(function (n) {
+          const when = n.timestamp
+            ? new Date(n.timestamp * 1000).toLocaleDateString("en-GB",
+                { day: "numeric", month: "short", year: "numeric" })
+            : "";
+          return '<div class="news-item"><div class="news-meta"><span class="tag">' +
+            esc(n.category) + "</span><span>" + esc(n.publisher) + "</span><span>" + when +
+            '</span></div><a href="' + esc(n.url) + '" target="_blank" rel="noopener noreferrer">' +
+            esc(n.title) + '</a><span class="news-why">' + esc(n.why) + "</span></div>";
+        }).join("")
+      : h.is_fund
+        ? "<p>Exchange-traded products generate no company news. What matters here is the " +
+          "price of the underlying asset.</p>"
+        : "<p>No high-impact company news found in the last few months. Low-impact market " +
+          "chatter is filtered out on purpose.</p>";
+
+    const notes = h.notes
+      ? '<p class="sub">Your notes</p><p>' +
+        esc(typeof h.notes === "string" ? h.notes : (h.notes.analysis || "")) + "</p>"
+      : "";
+
+    const warn = (h.warnings || []).map(function (w) {
+      return '<div class="notice">' + esc(w) + "</div>";
+    }).join("");
+
+    return warn +
+      '<section class="panel"><h3>What the company does</h3><p>' + desc + "</p>" +
+      '<div class="meta-row">' + chips.join("") + "</div>" +
+      (h.website ? '<p class="sub"><a href="' + esc(h.website) +
+        '" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">' +
+        esc(h.website.replace(/^https?:\/\//, "")) + "</a></p>" : "") + "</section>" +
+
+      '<section class="panel"><h3>Earnings</h3>' + earn.join("") + "</section>" +
+
+      '<section class="panel"><h3>Important news</h3>' + news + "</section>" +
+
+      '<section class="panel"><h3>What is happening</h3>' +
+      (h.analysis.story || []).map(function (p) { return "<p>" + esc(p) + "</p>"; }).join("") +
+      (h.purchase_date ? '<p class="sub">Bought ' + esc(h.purchase_date) + "</p>" : "") +
+      '<p class="sub">Priced ' + esc(h.price_time_display || DATA.generated_display) +
+      " &middot; " + esc(h.exchange || h.market) + "</p>" + notes + "</section>" +
+
+      '<section class="panel"><h3>Position &amp; valuation</h3>' +
+      '<div class="trend">' + sparkline(h.spark, h.ret_6m == null ? h.pl >= 0 : h.ret_6m >= 0, 320, 64) +
+      '<span class="sub">Six-month price trend</span></div>' + range +
+      '<div class="kv">' + stats + "</div></section>" +
+
+      '<section class="panel"><h3>Positives, risks &amp; what to watch</h3>' +
+      '<p class="sub">Supporting the price</p>' + bullets(h.analysis.positives) +
+      '<p class="sub">Working against it</p>' + bullets(h.analysis.risks) +
+      '<p class="sub">Watch next</p>' + bullets(h.analysis.watch) + "</section>";
+  }
+
+  function openDrawer(ticker) {
+    const h = DATA.holdings.find(function (x) { return x.ticker === ticker; });
+    if (!h) return;
+    const s = h.symbol;
+    state.open = ticker;
+
+    document.getElementById("drawer-name").textContent = h.ticker;
+    document.getElementById("drawer-sub").textContent =
+      h.name + " · " + (h.exchange || h.market) + (h.sector ? " · " + h.sector : "");
+    document.getElementById("drawer-figs").innerHTML = [
+      ["Current", money(s, h.current_price, dp(h.current_price)), tone(h.day_change_pct)],
+      ["Your cost", money(s, h.purchase_price, dp(h.purchase_price)), ""],
+      ["Value", money(s, h.current_value), ""],
+      ["Profit / loss", signed(s, h.pl), tone(h.pl)],
+      ["Change", pct(h.pl_pct), tone(h.pl)]
+    ].map(function (f) {
+      return '<div><span class="stat-label">' + f[0] + '</span><b class="' + f[2] + '">' +
+        f[1] + "</b></div>";
+    }).join("");
+    document.getElementById("drawer-body").innerHTML = drawerContent(h);
+    document.getElementById("drawer-body").scrollTop = 0;
+
+    drawerEl.hidden = false;
+    // Force a reflow so the transition has a start value to animate from.
+    // requestAnimationFrame would do the same, but it never fires in a tab the
+    // browser is not painting, which would leave the drawer stuck off-screen.
+    void drawerEl.offsetWidth;
+    drawerEl.classList.add("open");
+    scrimEl.classList.add("open");
+    document.body.style.overflow = "hidden";
+    document.getElementById("drawer-close").focus();
+    markActive();
+  }
+
+  function closeDrawer() {
+    state.open = null;
+    drawerEl.classList.remove("open");
+    scrimEl.classList.remove("open");
+    document.body.style.overflow = "";
+    setTimeout(function () { if (!state.open) drawerEl.hidden = true; }, 280);
+    markActive();
+  }
+
+  function markActive() {
+    document.querySelectorAll("tr.row").forEach(function (tr) {
+      tr.classList.toggle("active", tr.dataset.t === state.open);
+      tr.setAttribute("aria-expanded", String(tr.dataset.t === state.open));
+    });
+  }
+
+  /* ---------------------------------------------------------------- rows */
+  function visible() {
+    const q = state.query.trim().toLowerCase();
+    return DATA.holdings.filter(function (h) {
+      if (state.ref !== "all" && String(h.ref) !== state.ref) return false;
+      if ((state.filter === "US" || state.filter === "UK") && h.market !== state.filter) return false;
+      if (state.filter === "up" && h.pl < 0) return false;
+      if (state.filter === "down" && h.pl >= 0) return false;
+      if (!q) return true;
+      return (h.ticker + " " + (h.entered_as || "") + " " + h.name + " " + (h.ref || "") +
+        " " + (h.sector || "") + " " + (h.industry || ""))
+        .toLowerCase().indexOf(q) > -1;
+    }).sort(function (a, b) {
+      const key = state.sort;
+      const x = key === "news_count" ? (a.news || []).length : a[key];
+      const y = key === "news_count" ? (b.news || []).length : b[key];
+      if (x == null) return 1;
+      if (y == null) return -1;
+      if (typeof x === "string") return x.localeCompare(y) * state.dir;
+      return (x - y) * state.dir;
+    });
+  }
+
+  function render() {
+    const list = visible();
+    if (!list.length) {
+      rowsEl.innerHTML = '<tr><td class="empty" colspan="14">Nothing matches that filter.</td></tr>';
+      return;
+    }
+    rowsEl.innerHTML = list.map(function (h) {
+      const s = h.symbol;
+      const gaining = h.ret_6m == null ? h.pl >= 0 : h.ret_6m >= 0;
+      const earn = h.earnings_next
+        ? esc(h.earnings_next.replace(/ (\d{2})(\d{2})$/, " $2")) +
+          (h.earnings_next_estimate
+            ? '<abbr class="est" title="Estimated date, not confirmed by the company">*</abbr>'
+            : "")
+        : '<span style="color:var(--faint)">—</span>';
+      const signals = (h.news && h.news.length)
+        ? '<span class="tag">' + esc(h.news[0].category) + "</span>" +
+          (h.news.length > 1 ? ' <span class="sub-line">+' + (h.news.length - 1) + "</span>" : "")
+        : '<span style="color:var(--faint)">—</span>';
+
+      const move = (v) => '<td class="' + tone(v) + '">' + pct(v, 1) + "</td>";
+
+      return '<tr class="row ' + (h.pl >= 0 ? "up" : "down") + '" data-t="' + esc(h.ticker) +
+        '" tabindex="0" role="button" aria-expanded="false">' +
+        '<td class="ref-col">' + (h.ref == null ? "—" : h.ref) + "</td>" +
+        '<td class="left ticker pin" title="' + esc(h.name) +
+        (h.entered_as ? " (entered as " + esc(h.entered_as) + ")" : "") + '">' +
+        esc(h.ticker) + '<span class="company">' + esc(h.name) + "</span></td>" +
+        "<td>" + money(s, h.purchase_price, dp(h.purchase_price)) + "</td>" +
+        "<td>" + h.quantity.toLocaleString("en-GB") + "</td>" +
+        "<td>" + money(s, h.invested) + "</td>" +
+        "<td>" + money(s, h.current_price, dp(h.current_price)) + "</td>" +
+        move(h.day_change_pct) + move(h.ret_1w) + move(h.ret_1m) +
+        '<td class="pl-cash ' + tone(h.pl) + '">' + signed(s, h.pl) + "</td>" +
+        '<td><span class="pct-pill">' + pct(h.pl_pct) + "</span></td>" +
+        "<td>" + earn + "</td>" +
+        "<td>" + signals + "</td>" +
+        '<td><span class="caret">›</span></td></tr>';
+    }).join("");
+    markActive();
+    syncPin();
+  }
+
+  /* --------------------------------------------------------------- events */
+  function syncPin() {
+    shellEl.classList.toggle("is-pinned", shellEl.scrollLeft > 0);
+  }
+
+  shellEl.addEventListener("scroll", syncPin, { passive: true });
+  window.addEventListener("resize", syncPin);
+
+  rowsEl.addEventListener("click", function (e) {
+    const tr = e.target.closest("tr.row");
+    if (!tr || e.target.closest("a")) return;
+    if (state.open === tr.dataset.t) closeDrawer(); else openDrawer(tr.dataset.t);
+  });
+
+  rowsEl.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const tr = e.target.closest("tr.row");
+    if (!tr) return;
+    e.preventDefault();
+    openDrawer(tr.dataset.t);
+  });
+
+  document.getElementById("drawer-close").addEventListener("click", closeDrawer);
+  scrimEl.addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && state.open) closeDrawer();
+  });
+
+  /* One chip per distinct reference, but only when there is a choice to make. */
+  (function buildRefChips() {
+    const seen = [];
+    DATA.holdings.forEach(function (h) {
+      const v = h.ref == null ? "" : String(h.ref);
+      if (v && seen.indexOf(v) === -1) seen.push(v);
+    });
+    const host = document.getElementById("ref-chips");
+    if (seen.length < 2) return;
+    host.innerHTML = '<button class="chip is-ref" data-ref="all" aria-pressed="true">All refs</button>' +
+      seen.map(function (v) {
+        return '<button class="chip is-ref" data-ref="' + esc(v) + '" aria-pressed="false">' +
+          esc(v) + "</button>";
+      }).join("");
+    host.querySelectorAll(".chip[data-ref]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        state.ref = btn.dataset.ref;
+        host.querySelectorAll(".chip[data-ref]").forEach(function (b) {
+          b.setAttribute("aria-pressed", String(b === btn));
+        });
+        render();
+      });
+    });
+  })();
+
+  document.querySelectorAll(".chip[data-filter]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      state.filter = btn.dataset.filter;
+      document.querySelectorAll(".chip[data-filter]").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b === btn));
+      });
+      render();
+    });
+  });
+
+  document.getElementById("search").addEventListener("input", function (e) {
+    state.query = e.target.value;
+    render();
+  });
+
+  document.querySelectorAll("thead th[data-sort]").forEach(function (th) {
+    th.addEventListener("click", function () {
+      const key = th.dataset.sort;
+      state.dir = state.sort === key ? -state.dir
+        : (key === "ticker" || key === "name" ? 1 : -1);
+      state.sort = key;
+      document.querySelectorAll(".arrow").forEach(function (a) { a.textContent = ""; });
+      th.querySelector(".arrow").textContent = state.dir === 1 ? "▲" : "▼";
+      render();
+    });
+  });
+
+  /* ----------------------------------------------------------------- boot */
+  let saved = "system";
+  try { saved = localStorage.getItem(THEME_KEY) || "system"; } catch (e) { /* private mode */ }
+  setTheme(saved);
+
+  /* The Refresh button only means anything when serve.py is behind the page.
+     Opened as a plain file, or as a published Artifact, there is nothing to
+     call, so probe once and leave the button hidden if nothing answers. */
+  /* The Refresh button only means anything when serve.py is behind the page.
+     Opened as a plain file, or as a published Artifact, there is nothing to
+     call, so probe once and leave the button hidden if nothing answers.
+
+     Rebuilds run in the background on the server so a page load is never held
+     up by one. We poll instead, and reload when a newer build appears. */
+  (function wireRefresh() {
+    const btn = document.getElementById("refresh-now");
+    const line = document.querySelector(".stamp-line");
+    const meta = document.getElementById("stamp-meta");
+    if (location.protocol !== "http:" && location.protocol !== "https:") return;
+
+    let polling = null;
+    function status() {
+      return fetch("healthz", { cache: "no-store" }).then(function (r) {
+        if (!r.ok) throw new Error("no server");
+        return r.json();
+      });
+    }
+
+    function watch() {
+      if (polling) return;
+      btn.disabled = true;
+      btn.textContent = "Fetching…";
+      meta.hidden = false;
+      meta.textContent = "Re-reading the sheet…";
+      polling = setInterval(function () {
+        status().then(function (s) {
+          if (s.error) {
+            clearInterval(polling); polling = null;
+            btn.disabled = false; btn.textContent = "Retry";
+            line.classList.add("is-error");
+            meta.hidden = false;
+            meta.textContent = "Refresh failed: " + s.error;
+            return;
+          }
+          if (!s.building && s.generated && s.generated !== DATA.generated_display) {
+            clearInterval(polling); polling = null;
+            location.reload();
+          }
+        }).catch(function () {
+          clearInterval(polling); polling = null;
+          btn.disabled = false; btn.textContent = "Refresh";
+          meta.hidden = true;
+        });
+      }, 2000);
+    }
+
+    status().then(function (s) {
+      btn.hidden = false;
+      if (s.building) watch();
+    }).catch(function () { /* static copy - nothing to refresh against */ });
+
+    btn.addEventListener("click", function () {
+      line.classList.remove("is-error");
+      fetch("refresh", { cache: "no-store" })
+        .then(function (r) { return r.json(); })
+        .then(function () { watch(); })
+        .catch(function () {
+          btn.textContent = "Retry";
+          line.classList.add("is-error");
+          meta.hidden = false;
+          meta.textContent = "Could not reach the server.";
+        });
+    });
+  })();
+
+  document.getElementById("stamp-time").textContent = DATA.generated_display;
+  renderTotals();
+  render();
+</script>

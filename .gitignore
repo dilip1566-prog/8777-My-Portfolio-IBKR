@@ -1,0 +1,21 @@
+# Your actual holdings, and everything derived from them, stay off GitHub.
+# This repository is public, so anything committed here is permanently visible
+# to anyone and survives in the git history even if deleted later.
+
+# What you own and what you paid
+holdings.csv
+notes.json
+
+# The link to your private Google Sheet
+source.json
+
+# Generated output - all of it embeds the full portfolio
+data.json
+dashboard.html
+dashboard_artifact.html
+dashboard_74_holdings.html
+
+# Runtime noise
+server.log
+__pycache__/
+*.py[cod]
